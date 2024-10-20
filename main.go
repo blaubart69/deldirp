@@ -89,12 +89,18 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 				break
 			} else {
 				// are we the last to turn off the light?
+				// 	ether we removed a file or enumerated a directory.
+				//		file: removed one file
+				//			==> decrement by 1
+				//		dir:  processed this directory (initial refcount was 1)
+				//          ==> we are done with this dir and decrement by 1
 				if atomic.AddInt64(&currDir.ref, -1) == 0 {
 					if err := os.Remove(currDir.name); err != nil {
 						log.Printf("E: directory: %v\n", err)
 					} else {
 						atomic.AddUint64(&stats.dirs, 1)
-						//log.Printf("D: remove directory: %s\n", currDir.name)
+						// important!
+						// 	 we have to check the directories all the way up
 						currDir = currDir.parent
 					}
 				} else {
