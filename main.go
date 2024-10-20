@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Stats struct {
@@ -43,7 +44,7 @@ func RemoveFile(filename string, stats *Stats) {
 		log.Printf("E: remove file: %v\n", err)
 		atomic.AddUint64(&stats.errors, 1)
 	} else {
-		log.Printf("D: remove file: %s\n", filename)
+		//log.Printf("D: remove file: %s\n", filename)
 		atomic.AddUint64(&stats.files, 1)
 	}
 }
@@ -93,7 +94,7 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 						log.Printf("E: directory: %v\n", err)
 					} else {
 						atomic.AddUint64(&stats.dirs, 1)
-						log.Printf("D: remove directory: %s\n", currDir.name)
+						//log.Printf("D: remove directory: %s\n", currDir.name)
 						currDir = currDir.parent
 					}
 				} else {
@@ -109,6 +110,14 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 			close(queue.itemsChan)
 		}
 	}
+}
+
+func PrintStats(stats *Stats, queue chan interface{}) {
+	fmt.Printf("queued: %12d dirs: %12d files: %12d errors: %12d\n",
+		len(queue),
+		atomic.LoadUint64(&stats.dirs),
+		atomic.LoadUint64(&stats.files),
+		atomic.LoadUint64(&stats.errors))
 }
 
 func main() {
@@ -139,7 +148,7 @@ func main() {
 	var wg sync.WaitGroup
 	queue := Queue{
 		itemCount: 0,
-		itemsChan: make(chan interface{}, 4096),
+		itemsChan: make(chan interface{}, 512*1024),
 	}
 	for i := 0; i < *workers; i++ {
 		wg.Add(1)
@@ -152,5 +161,14 @@ func main() {
 		name:   cleanPath,
 	})
 
+	go func(stats *Stats, queue chan interface{}) {
+		for {
+			time.Sleep(2 * time.Second)
+			PrintStats(stats, queue)
+		}
+	}(&stats, queue.itemsChan)
+
 	wg.Wait()
+
+	PrintStats(&stats, queue.itemsChan)
 }
