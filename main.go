@@ -12,9 +12,17 @@ import (
 	"time"
 )
 
+const CacheLinePadSize = 64
+
+type CacheLinePad struct {
+	_ [CacheLinePadSize]byte
+}
+
 type Stats struct {
 	files  uint64
+	_      CacheLinePad
 	dirs   uint64
+	_      CacheLinePad
 	errors uint64
 }
 
