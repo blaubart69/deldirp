@@ -113,9 +113,11 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 					}
 				} else {
 					break
-					// if > 0 ... there are some refs lefts to this dir
+					// if > 0 ... there are some refs lefts to this dir.
+					//			  	someone will come accross here later
+					//				and remove the directory.
 					// if < 0 ... someone else has reached 0 first
-					//				and is doing the cleanup
+					//				and is doing the cleanup.
 				}
 			}
 		}
