@@ -123,6 +123,8 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 		}
 
 		if atomic.AddInt64(&queue.itemCount, -1) == 0 {
+			// when itemCount reaches zero, no other worker is active anymore.
+			// close the channel and signal "end" to other workers
 			close(queue.itemsChan)
 		}
 	}
