@@ -76,6 +76,24 @@ func EnqueueDirItems(d *Dir, queue *Queue, stats *Stats) {
 	}
 }
 
+func EnqueueTopLevelItems(dirname string, queue *Queue, stats *Stats) {
+	entries, err := os.ReadDir(dirname)
+	if err != nil {
+		atomic.AddUint64(&stats.errors, 1)
+		log.Printf("E: ReadDir() %v\n", err)
+		return
+	}
+
+	for _, entry := range entries {
+		fullName := filepath.Join(dirname, entry.Name())
+		if entry.IsDir() {
+			queue.enqueue(&Dir{parent: nil, ref: 1, name: fullName})
+		} else {
+			queue.enqueue(&File{dir: nil, name: fullName})
+		}
+	}
+}
+
 func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -127,7 +145,7 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 			// close the channel and signal "end" to other workers
 			close(queue.itemsChan)
 		}
-	}
+	} // channel loop
 }
 
 func PrintStats(stats *Stats, queue chan interface{}) {
@@ -140,6 +158,7 @@ func PrintStats(stats *Stats, queue chan interface{}) {
 
 func main() {
 	workers := flag.Int("w", runtime.NumCPU(), "number of workers")
+	optEmptyDir := flag.Bool("e", false, "empty directory. Do not remove itself.")
 	flag.Parse()
 
 	if len(flag.Args()) != 1 {
@@ -176,18 +195,28 @@ func main() {
 		go deldir(&queue, &stats, &wg)
 	}
 
-	queue.enqueue(&Dir{
-		parent: nil,
-		ref:    1,
-		name:   cleanPath,
-	})
-
 	go func(stats *Stats, queue chan interface{}) {
 		for {
 			time.Sleep(2 * time.Second)
 			PrintStats(stats, queue)
 		}
 	}(&stats, queue.itemsChan)
+
+	if *optEmptyDir {
+		queue.itemCount += 1
+		EnqueueTopLevelItems(cleanPath, &queue, &stats)
+		if atomic.AddInt64(&queue.itemCount, -1) == 0 {
+			// this means that:
+			// all items were already deleted while enqueuing them here
+			close(queue.itemsChan)
+		}
+	} else {
+		queue.enqueue(&Dir{
+			parent: nil,
+			ref:    1,
+			name:   cleanPath,
+		})
+	}
 
 	wg.Wait()
 
