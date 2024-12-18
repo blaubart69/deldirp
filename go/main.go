@@ -104,7 +104,7 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 				//          ==> we are done with this dir and decrement by 1
 				if atomic.AddInt64(&currDir.ref, -1) == 0 {
 					if err := os.Remove(currDir.name); err != nil {
-						log.Printf("E: directory: %v\n", err)
+						log.Printf("E: remove directory: %v\n", err)
 					} else {
 						atomic.AddUint64(&stats.dirs, 1)
 						// important!
