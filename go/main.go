@@ -151,15 +151,18 @@ func main() {
 	cleanPath, err := filepath.Abs(flag.Arg(0))
 	if err != nil {
 		log.Fatal(err)
+		os.Exit(4)
 	}
 
 	cleanPathStat, err := os.Stat(cleanPath)
 	if err != nil {
 		log.Fatal(err)
+		os.Exit(4)
 	}
 
 	if !cleanPathStat.IsDir() {
 		log.Fatalf("given argument is not a directory. (%s)\n", cleanPath)
+		os.Exit(4)
 	}
 
 	var stats Stats
