@@ -131,15 +131,13 @@ func deldir(queue *Queue, stats *Stats, wg *sync.WaitGroup) {
 
 	for item := range queue.itemsChan {
 		var currDir *Dir
-		switch item.(type) {
+		switch item := item.(type) {
 		case *File:
-			f := item.(*File)
-			RemoveFile(f.name, stats)
-			currDir = f.dir
+			RemoveFile(item.name, stats)
+			currDir = item.dir
 		case *Dir:
-			d := item.(*Dir)
-			EnqueueDirItems(d, queue, stats)
-			currDir = d
+			EnqueueDirItems(item, queue, stats)
+			currDir = item
 		}
 
 		removeDirsUpwardsWithRefCountZero(currDir, stats)
